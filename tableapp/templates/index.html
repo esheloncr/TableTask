@@ -1,0 +1,161 @@
+{% extends "base.html" %}
+{% load static %}
+{% block title %}
+
+{% endblock title %}
+{% block content %}
+<h1>Tables</h1>
+<div class="search_field">
+    <span>Поиск по: </span>
+    <select id="field">
+        <option value="title">Названию</option>
+        <option value="count">Количеству</option>
+        <option value="distance">Дистанции</option>
+    </select>
+    <span>Условие:</span>
+    <select id="options">
+        <option value="contains">Содержит</option>
+        <option value="equal">Равно</option>
+        <option value="bigger">Больше</option>
+        <option value="lower">Меньше</option>
+    </select>
+    <input type="text" class="search_input">
+</div>
+<div class="sort">
+    <span>Сортировать по столбцу:</span>
+    <select id="filters">
+        <option value="title">Название</option>
+        <option value="count">Количество</option>
+        <option value="distance">Дистанция</option>
+    </select>
+</div>
+<div class="main_table">
+    <table class="table_one">
+        <tr class="labels">
+            <td>Название</td>
+            <td>Количество</td>
+            <td>Дата</td>
+            <td>Дистанция</td>
+        </tr>
+        {% for q in query %}
+        <tr>
+            <td class="std title">{{ q.title }}</td>
+            <td class="std count">{{ q.count }}</td>
+            <td class="std date">{{ q.date }}</td>
+            <td class="std distance">{{ q.distance }}</td>
+        </tr>
+        {% endfor %}
+    </table>
+</div>
+<div class="pages">
+    <p>Страницы:
+    {% for p in pages %}
+        <span class="page_number">{{ p }}</span>
+    {% endfor %}
+    </p>
+</div>
+<script type="text/javascript" src={% static 'js/main.js' %}></script>
+<script>
+    $(".page_number").on("click", function(){
+    current_page = $(this).text()
+    data = {
+        is_ajax: 1,
+        current_page: $(this).text()
+    }
+    $.ajax({
+    method: 'get',
+    data: data,
+    url: "{% url 'get_by_page' %}",
+    success: function asr(data){
+        result = data['data'];
+        $(".paginated").remove();
+        $(".std").hide();
+        $.each(result, function(key, obj){
+            $(".table_one").append(
+               '<tr class="paginated">' +
+                    '<td>' + obj['title'] + '</td>' +
+                    '<td>' + obj['count'] + '</td>' +
+                    '<td>' + obj['date'] + '</td>' +
+                    '<td>' + obj['distance'] + '</td>' +
+                '</tr>'
+            )
+        })
+    }
+    })
+})
+$("#filters").on('change', function(){
+    data = {
+        sort_filters:$("#filters").val(),
+    }
+    $(".sorted").remove();
+    $("tr:empty").remove();
+    $(".page_number").hide();
+    $.ajax({
+        method: 'get',
+        data: data,
+        url: "{% url 'sort_data' %}",
+        success: function(data){
+            result = data['data'];
+            $(".pages").hide();
+            $.each(result, function(key, obj){
+                $(".std").hide();
+                $(".table_one").append(
+                '<tr class="sorted">' +
+                    '<td>' + obj['title'] + '</td>' +
+                    '<td>' + obj['count'] + '</td>' +
+                    '<td>' + obj['date'] + '</td>' +
+                    '<td>' + obj['distance'] + '</td>' +
+                '</tr>'
+                )
+            })
+        }
+    })
+})
+$(".search_input").on("input", debounce(function(){
+    data = {
+    search: $(".search_input").val(),
+    column: $("#field").val(),
+    option: $("#options").val()
+    }
+    $(".pages").hide();
+    $.ajax({
+        method: 'get',
+        data: data,
+        url: '{% url "search_data" %}',
+        success: function(data){
+            result = data['data'];
+            if (!data['data']){
+                $(".no_results").remove();
+                $(".std").hide();
+                $(".table_one").append('<p class="no_results">No results</p>');
+            }
+            $(".filtered").remove();
+            $(".paginated").remove();
+            $.each(result, function (key, obj) {
+                $(".sort").hide();
+                $(".sorted").remove();
+                $(".no_results").remove();
+                $(".std").hide();
+                $(".table_one").append(
+                '<tr class="filtered">' +
+                    '<td class="search">' + obj['title'] + '</td>' +
+                    '<td class="search">' + obj['count'] + '</td>' +
+                    '<td class="search">' + obj['date'] + '</td>' +
+                    '<td class="search">' + obj['distance'] + '</td>' +
+                '</tr>'
+                )
+            })
+            if($(".search_input").val().length == 0){
+                $(".paginated").remove();
+                $(".sort").show();
+                $(".filtered").remove();
+                $(".no_results").remove();
+                $(".search").remove();
+                $(".std").show();
+                $(".pages").show();
+            }
+        }
+    })
+ }, 750))
+</script>
+{% endblock content %}
